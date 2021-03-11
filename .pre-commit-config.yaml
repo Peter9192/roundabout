@@ -1,0 +1,40 @@
+repos:
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v3.4.0
+  hooks:
+    - id: check-ast
+    - id: check-byte-order-marker
+    - id: check-case-conflict
+    - id: check-docstring-first
+    - id: check-json
+    - id: check-yaml
+    - id: debug-statements
+    - id: detect-private-key
+    - id: end-of-file-fixer
+    - id: trailing-whitespace
+    - id: mixed-line-ending
+
+- repo: https://gitlab.com/PyCQA/flake8
+  rev: 3.8.4
+  hooks:
+    - id: flake8
+      args: ["--max-line-length=88"]
+
+- repo: https://github.com/PyCQA/isort
+  rev: 5.7.0
+  hooks:
+    - id: isort
+      args: ["line_length=88"]
+
+- repo: https://github.com/psf/black
+  rev: 20.8b1
+  hooks:
+    - id: black
+
+- repo: local
+  hooks:
+    - id: pytest
+      name: pytest
+      language: system
+      entry: poetry run pytest
+      types: [python]
