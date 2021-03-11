@@ -10,7 +10,7 @@ Also note the similar package https://github.com/Silmathoron/mpl_chord_diagram. 
 ## How to use
 
 ```sh
-pip install <repo>
+pip install git+https://github.com/Peter9192/roundabout.git
 ```
 
 ```python
