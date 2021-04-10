@@ -6,6 +6,8 @@ from itertools import combinations
 
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.colors import LinearSegmentedColormap
+from scipy.interpolate import griddata
 
 
 @np.vectorize
@@ -58,7 +60,35 @@ def plot_arc_segment(arc, color, r1=1.0, r2=1.1, ax=None):
     ax.fill(x, y, color=color)
 
 
-def plot_chord(p1, p2, p3, p4, ax=None, **kwargs):
+def fill_gradient(polygon, colors, midline, ax=None, alpha=1):
+    """Fill polygons with an inverse color gradient."""
+    ax = plt.gca() if ax is None else ax
+
+    # Create a color gradient between the 2 input colors
+    cmap = LinearSegmentedColormap.from_list("name", colors)
+
+    # The 'spine' of the chord determines the inverse gradient
+    x, y = midline
+    z = np.linspace(1, 0, len(x))
+    # ax.scatter(x, y, c=z, cmap=cmap)
+
+    # Fill a grid with according to nearest reference point
+    coords = np.linspace(-1, 1, 50)
+    gridx, gridy = np.meshgrid(coords, coords)
+    zi = griddata((x, y), z, (gridx, gridy), method="nearest")
+
+    ax.imshow(
+        zi,
+        clip_path=polygon,
+        extent=[-1.2, 1.2, -1.2, 1.2],
+        cmap=cmap,
+        origin="lower",
+        interpolation="bilinear",
+        alpha=alpha,
+    )
+
+
+def plot_chord(p1, p2, p3, p4, colors, ax=None, alpha=1, outline=True):
     """Connect 4 points on a unit circle to draw a polygon."""
     ax = plt.gca() if ax is None else ax
 
@@ -74,7 +104,16 @@ def plot_chord(p1, p2, p3, p4, ax=None, **kwargs):
 
     # Plot on cartesian axes
     x, y = polar_to_cartesian(r, theta)
-    (polygon,) = ax.fill(x, y, **kwargs)
+    (polygon,) = ax.fill(x, y, c=colors[0], alpha=0)
+
+    midpoint1 = (p4 + p1) / 2
+    midpoint2 = (p2 + p3) / 2
+    midline = polar_bezier_curve(midpoint1, midpoint2)
+    midline = polar_to_cartesian(*midline)
+    fill_gradient(polygon, colors, midline, ax=ax, alpha=alpha)
+
+    if outline is True:
+        ax.plot(x, y, "k", lw=0.5)
 
 
 def sort(matrix, strategy="original"):
@@ -159,9 +198,9 @@ def draw_chord_diagram(
 
         width = matrix[i, j]
         if threshold and width > threshold:
-            plot_chord(p1, p2, p3, p4, ax, color=colors[i], alpha=0.75, lw=0.5, ec="k")
+            plot_chord(p1, p2, p3, p4, colors[[i, j]], ax, outline=True)
         else:
-            plot_chord(p1, p2, p3, p4, ax, color=colors[i], alpha=0.25, lw=0)
+            plot_chord(p1, p2, p3, p4, colors[[i, j]], ax, alpha=0.5, outline=False)
 
     # Add labels
     for segment, label in zip(segments, labels):
