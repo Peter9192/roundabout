@@ -41,18 +41,40 @@ def polar_bezier_curve(theta1, theta2, r=1):
     return r, theta
 
 
-def constuct_chord(p1, p2, p3, p4):
-    """Connect 4 points on a unit circle to draw a polygon."""
+def plot_arc_segment(arc, color, r1=1.0, r2=1.1, ax=None):
+    """Plot an arc segment in cartesian coordinates."""
+    ax = plt.gca() if ax is None else ax
 
+    # Determine the inner and outer ring segments
+    theta = np.linspace(arc.min(), arc.max(), 25)
+    x1, y1 = polar_to_cartesian(r1, theta)
+    x2, y2 = polar_to_cartesian(r2, theta)
+
+    # Combine into a single outline
+    x = np.concatenate([x1, x2[::-1], x1[[0]]])
+    y = np.concatenate([y1, y2[::-1], y1[[0]]])
+
+    # Plot on cartesian axes
+    ax.fill(x, y, color=color)
+
+
+def plot_chord(p1, p2, p3, p4, ax=None, **kwargs):
+    """Connect 4 points on a unit circle to draw a polygon."""
+    ax = plt.gca() if ax is None else ax
+
+    # Calculate the 4 outlines of the chord in polar coords
     r1, theta1 = polar_bezier_curve(p1, p2)
     r2, theta2 = np.ones(10), np.linspace(p2, p3, 10)
     r3, theta3 = polar_bezier_curve(p3, p4)
     r4, theta4 = np.ones(10), np.linspace(p4, p1, 10)
 
+    # Combine into a single outline
     r = np.concatenate([r1, r2, r3, r4])
     theta = np.concatenate([theta1, theta2, theta3, theta4])
 
-    return r, theta
+    # Plot on cartesian axes
+    x, y = polar_to_cartesian(r, theta)
+    (polygon,) = ax.fill(x, y, **kwargs)
 
 
 def sort(matrix, strategy="original"):
@@ -124,29 +146,25 @@ def draw_chord_diagram(
     segments = calculate_segments(sorted_matrix, spacing=spacing, padding=padding)
 
     # Plot arcs
-    ax = plt.subplot(111, projection="polar")
+    ax = plt.subplot(111, aspect="equal")
     ax.set_axis_off()
     for arc, color in zip(segments, colors):
-        r = np.linspace(arc.min(), arc.max(), 25)
-        ax.fill_between(r, 1, 1.1, color=color)
+        plot_arc_segment(arc, color, ax=ax)
 
     # Plot chords
     for i, j in combinations(range(n), 2):
 
         p1, p4 = segments[i, unsort[i, j]]
-        # p1, p4 = segments[i, j] if unsort is applied to segments instead
         p3, p2 = segments[j, unsort[j, i]]
-        # p3, p2 = segments[j, i] if unsort is applied to segments instead
-        r, theta = constuct_chord(p1, p2, p3, p4)
 
         width = matrix[i, j]
         if threshold and width > threshold:
-            ax.fill(theta, r, color=colors[i], alpha=0.75, lw=0)
-            ax.plot(theta, r, color="k", lw=0.5)
+            plot_chord(p1, p2, p3, p4, ax, color=colors[i], alpha=0.75, lw=0.5, ec="k")
         else:
-            ax.fill(theta, r, color=colors[i], alpha=0.25, lw=0)
+            plot_chord(p1, p2, p3, p4, ax, color=colors[i], alpha=0.25, lw=0)
 
     # Add labels
     for segment, label in zip(segments, labels):
         midpoint = (segment.min() + segment.max()) / 2
-        ax.text(midpoint, 1.2, label, ha="center", va="center")
+        x, y = polar_to_cartesian(1.2, midpoint)
+        ax.text(x, y, label, ha="center", va="center")
